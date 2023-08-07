@@ -1,10 +1,10 @@
 # Türkçe Databalancing_methods
 Türkçe Metin Veri dengeleme yöntemleri
 
-1- Neden gereklidir?
-2- Hangi yöntemler kullanılır?
-3- Hangileri efektiftir?
-4- TextGAN çılgınlığı
+1- Neden gereklidir? <br>
+2- Hangi yöntemler kullanılır?<br>
+3- Hangileri efektiftir? <br>
+4- TextGAN çılgınlığı <br>
 
 1- Neden gereklidir?
 Sınıf dengesizliği, veri kümesindeki farklı sınıflara ait örneklerin sayısının önemli ölçüde farklı olması durumudur. Özellikle azınlık sınıfların sayısı çok daha az olduğunda, bu durum sınıflandırma modellerinin performansını olumsuz etkileyebilir.
