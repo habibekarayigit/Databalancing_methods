@@ -1,0 +1,113 @@
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.metrics import f1_score
+import pandas as pd
+from pyloras import LORAS
+#from umap import UMAP
+from sklearn.svm import SVC
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, precision_recall_curve, auc
+from sklearn.svm import LinearSVC
+from collections import Counter
+from sklearn.manifold import TSNE
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.datasets import make_classification
+from umap import UMAP
+from sklearn.preprocessing import MinMaxScaler
+
+train_files = ['/content/drive/My Drive/Data-Level Hybrid Ensemble Methods To Abusive Detection in Imbalanced ATC dataset/ATC/fold_{}_train.xlsx'.format(i) for i in range(0, 10)]
+test_files = ['/content/drive/My Drive/Data-Level Hybrid Ensemble Methods To Abusive Detection in Imbalanced ATC dataset/ATC/fold_{}_test.xlsx'.format(i) for i in range(0, 10)]
+precisions = []
+recalls = []
+roc_values = [] # Her bir fold için ROC eğrisi verilerini tutacak liste
+# Ortalama Makro F1 değeri hesaplamak için boş bir liste oluşturun
+macro_f1_values = []
+# Ortalama Precision ve Recall değerleri hesaplamak için boş değişkenler oluşturun
+mean_precision = 0
+mean_recall = 0
+mean_roc_auc_values = []
+
+for i in range(10):
+    X_train = pd.read_excel(train_files[i])
+    X_test = pd.read_excel(test_files[i])
+    y_train = X_train['label']
+    y_test = X_test['label']
+
+    # TfidfVectorizer oluşturun ve eğitim verilerini dönüştürün
+    tfidf_vectorizer = TfidfVectorizer(norm=None, smooth_idf=False, sublinear_tf=False, use_idf=True, ngram_range=(1, 1))
+    x_train = tfidf_vectorizer.fit_transform(X_train['message'])
+    x_test = tfidf_vectorizer.transform(X_test['message'])
+
+    # t-SNE dönüşümünü başlatma parametresini 'random' olarak ayarlayın
+    tsne = TSNE(n_components=2, init='random')
+    X_tsne_train = tsne.fit_transform(x_train)
+
+    # Apply min-max scaling to ensure all values are non-negative
+    scaler = MinMaxScaler()
+    X_tsne_train = scaler.fit_transform(X_tsne_train)
+
+    lrs = LORAS(random_state=0, manifold_learner_params={'perplexity': 35, 'n_iter': 250})
+    X_resampled, y_resampled = lrs.fit_resample(X_tsne_train, y_train)
+
+    # Sınıf dağılımını kontrol edin
+    print(sorted(Counter(y_resampled.astype(int)).items()))
+
+    ## Apply the same transformation to the test data
+    X_tsne_test = tsne.fit_transform(x_test)
+
+    # Apply min-max scaling to test data as well
+    X_tsne_test = scaler.transform(X_tsne_test)
+
+    x_train = X_resampled
+    y_train = y_resampled.astype(int)
+    x_test = X_tsne_test
+    # Modeli eğit ve test et
+    #model= SVC(C=1.0, kernel='linear')
+    #model=LinearSVC(C=10.01)
+    #model= RandomForestClassifier(n_estimators=9)  # You can adjust the n_estimators as needed
+    model = MultinomialNB()
+    model.fit(x_train, y_train) # Train kümeleri
+    y_pred = model.predict(x_test) # Test kümeleri
+
+    # classification report'u elde edin ve yazdırın
+    classification_rep = classification_report(y_test, y_pred)
+    print("Classification Report ({}):".format(i))
+    print(classification_rep)
+
+    # Precision ve recall değerlerini hesapla
+    precision, recall, _ = precision_recall_curve(y_test, y_pred)
+
+    # Değerleri listeye ekle
+    precisions.append(precision)
+    recalls.append(recall)
+
+    # F1 değerini hesapla ve listeye ekle
+    f1 = f1_score(y_test, y_pred, average='macro')
+    macro_f1_values.append(f1)
+
+    # Precision ve recall değerlerini topla
+    mean_precision += precision.mean()
+    mean_recall += recall.mean()
+
+    # ROC eğrisi verilerini hesapla
+    fpr, tpr, _ = roc_curve(y_test, y_pred)
+
+    # Değerleri listeye ekle
+    roc_values.append((fpr, tpr))
+    # AUC hesapla
+    roc_auc = auc(fpr, tpr)
+    # AUC değerini listeye ekle
+    mean_roc_auc_values.append(roc_auc)
+
+# Ortalama Precision ve Recall değerlerini hesapla
+mean_precision /= 10
+mean_recall /= 10
+# Ortalama ROC AUC değerini hesapla
+mean_roc_auc = np.mean(mean_roc_auc_values)
+# Ortalama Makro F1 değerini hesapla
+mean_macro_f1 = sum(macro_f1_values) / len(macro_f1_values)
+
+print("Ortalama Makro F1 değeri:", mean_macro_f1)
+print("Ortalama Precision değeri:", mean_precision)
+print("Ortalama Recall değeri:", mean_recall)
