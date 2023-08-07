@@ -1,5 +1,5 @@
 # Türkçe Databalancing_methods
-Metin Veri dengeleme yöntemleri
+Türkçe Metin Veri dengeleme yöntemleri
 
 1- Neden gereklidir?
 2- Hangi yöntemler kullanılır?
