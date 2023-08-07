@@ -1,7 +1,7 @@
 # Türkçe Databalancing_methods
 Türkçe Metin Veri dengeleme yöntemleri
 
-1- Neden gereklidir? <br>
+1- Neden gereklidir? </br>
 2- Hangi yöntemler kullanılır?<br>
 3- Hangileri efektiftir? <br>
 4- TextGAN çılgınlığı <br>
