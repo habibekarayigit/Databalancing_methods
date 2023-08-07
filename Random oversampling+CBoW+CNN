@@ -1,0 +1,97 @@
+import pandas as pd
+from gensim.models import Word2Vec
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Embedding, Conv1D, GlobalMaxPooling1D, Dense
+from sklearn.metrics import classification_report, precision_recall_curve, average_precision_score
+import matplotlib.pyplot as plt
+from sklearn.utils import resample
+from collections import Counter
+
+# Veri kümelerini otomatik olarak yüklemek için dosya yollarını oluşturun
+train_files = ['/content/drive/My Drive/Data-Level Hybrid Ensemble Methods To Abusive Detection in Imbalanced ATC dataset/ATC/fold_{}_train.xlsx'.format(i) for i in range(10)]
+test_files = ['/content/drive/My Drive/Data-Level Hybrid Ensemble Methods To Abusive Detection in Imbalanced ATC dataset/ATC/fold_{}_test.xlsx'.format(i) for i in range(10)]
+
+# Liste ve değişkenleri tanımlayın
+precisions = []
+recalls = []
+roc_values = []  # Her bir fold için ROC eğrisi verilerini tutacak liste
+macro_f1_values = []  # Ortalama Makro F1 değeri hesaplamak için boş bir liste
+mean_precision = 0
+mean_recall = 0
+mean_roc_auc_values = []
+
+# 10-fold cross-validation işlemi
+for i in range(10):
+    # Veri kümelerini yükleyin
+    X_train = pd.read_excel(train_files[i])
+    X_test = pd.read_excel(test_files[i])
+
+    counter = Counter(X_train['label'])
+    print('Before', counter)
+    # Separate the minority and majority classes
+    df_majority = X_train[X_train['label'] == 0]
+    df_minority = X_train[X_train['label'] == 1]
+
+    # Oversample the minority class
+    df_minority_oversampled = resample(df_minority, replace=True, n_samples=17846, random_state=0)
+
+    # Combine majority class with oversampled minority class
+    df_oversampled = pd.concat([df_majority, df_minority_oversampled])
+    counter = Counter(df_oversampled['label'])
+    print('After', counter)
+
+    # Word2Vec modelini eğitin
+    sentences = [text.split() for text in df_oversampled['message']]
+    word2vec_model = Word2Vec(sentences, sg=0, vector_size=100, window=5, min_count=1, workers=4)
+
+    # CNN modelini oluşturun
+    model = Sequential()
+    model.add(Embedding(input_dim=len(word2vec_model.wv.index_to_key), output_dim=100, input_length=279))
+    model.add(Conv1D(128, 5, activation='relu'))
+    model.add(GlobalMaxPooling1D())
+    model.add(Dense(1, activation='sigmoid'))
+
+    # Modeli derleyin
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+    # Verileri hazırlayın
+    xt_encoded = [[word2vec_model.wv.key_to_index[word] for word in text.split() if word in word2vec_model.wv.key_to_index] for text in df_oversampled['message']]
+    xvl_encoded = [[word2vec_model.wv.key_to_index[word] for word in text.split() if word in word2vec_model.wv.key_to_index] for text in X_test['message']]
+
+    maxlen = 279
+    xt_padded = tf.keras.preprocessing.sequence.pad_sequences(xt_encoded, padding='post', maxlen=maxlen)
+    xvl_padded = tf.keras.preprocessing.sequence.pad_sequences(xvl_encoded, padding='post', maxlen=maxlen)
+
+    y_train = df_oversampled['label'].values
+    y_val = X_test['label'].values
+
+    # Modeli eğitin
+    model.fit(xt_padded, y_train, epochs=1, batch_size=8)
+
+    # Sınıflandırma sonuçlarını elde edin
+    y_pred = model.predict(xvl_padded)
+    y_pred = (y_pred > 0.5).astype(int)
+
+    # Precision, Recall ve AUC değerlerini hesaplayın ve listelere ekleyin
+    precision, recall, _ = precision_recall_curve(y_val, y_pred)
+    average_precision = average_precision_score(y_val, y_pred)
+
+    precisions.append(precision)
+    recalls.append(recall)
+    mean_roc_auc_values.append(average_precision)
+
+    # Sınıflandırma raporu alın ve ekrana yazdırın
+    report = classification_report(y_val, y_pred)
+    print(f"Fold-{i+1} Classification Report:")
+    print(report)
+
+# Ortalama Precision, Recall ve ROC değerlerini hesaplayın
+mean_precision = sum(precisions) / len(precisions)
+mean_recall = sum(recalls) / len(recalls)
+mean_roc_auc = sum(mean_roc_auc_values) / len(mean_roc_auc_values)
+
+print("Ortalama Makro F1 değeri:", mean_macro_f1)
+print("Mean Precision:", mean_precision)
+print("Mean Recall:", mean_recall)
+print("Mean ROC AUC:", mean_roc_auc)
