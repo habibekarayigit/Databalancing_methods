@@ -1,0 +1,50 @@
+#This code uses LDA for topic extraction from text data. It includes steps for creating a count vectorizer, training an LDA model, and determining topics for each document. 
+#Additionally, it outputs the 15 most prominent words for each topic
+
+#for google colab
+#First, you specify the path of your file and import the necessary libraries
+!ls '/content/drive/My Drive/Colab Notebooks/tweet.xlsx'
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+
+#You read your Excel file using the pd.read_excel function and display the first five rows
+tweet = pd.read_excel("/content/drive/My Drive/Colab Notebooks/tweet.xlsx")
+tweet.head()
+
+#You display information about your DataFrame
+tweet.info()
+
+#You use CountVectorizer to create a term frequency matrix and then create the Document-Term Matrix (DTM)
+cv = CountVectorizer(max_df=0.95,min_df=2,stop_words='english')
+dtm = cv.fit_transform(tweet['message'])
+dtm.shape
+
+#You define and train the Latent Dirichlet Allocation (LDA) model
+LDA = LatentDirichletAllocation(n_components=3,random_state=42)
+topic_results = LDA.fit_transform(dtm)
+
+#You display the components of the LDA model
+LDA.components_.shape
+
+#You create a loop to show the top 15 words for each topic
+for i,arr in enumerate(LDA.components_):
+
+    print(f'TOP 15 WORDS FOR TOPIC #{i}')
+
+    #arr.argsort() will sort the words on the basis of the probability of the
+    #occurence of that word in the document of that specific
+    #topic in the ascending order we have taken last 15 words which means the 15 most
+    #probable words that will occur for that topic
+    #cv.get_feature_names is just a list of all the words in our corpus
+    print([cv.get_feature_names_out()[i] for i in arr.argsort()[-15:]])
+
+    print('\n')
+    print('\n')
+
+#You determine the most prominent topic for each document and create a 'topic' column
+tweet['topic'] = topic_results.argmax(axis=1)
+tweet
+
+
