@@ -1,1 +1,29 @@
+!pip install bertopic
+import pandas as pd
+
+df = pd.read_csv("/content/drive/My Drive/tokyo_2020_tweets.csv", engine='python')
+df.head()
+docs = df[0:10000].text.to_list()
+docs
+
+"""
+['Let the party begin\n#Tokyo2020',
+ 'Congratulations #Tokyo2020 https://t.co/8OFKMs9ukq',
+ "Big Breaking Now \n\nTokyo Olympic Update \n\nJapan won his first Gold 🥇 Takato Naohisa won Gold in men's 60 kg Judo, C… https://t.co/tRcfDd7clY",
+ 'Q4: 🇬🇧3-1🇿🇦\n\nGreat Britain finally find a way way Pieterse, with Jack Waller finding the net via the stick of a Sou… https://t.co/kdeNYg9THk',
+ 'All I can think of every time I watch the rings event #Tokyo2020 #ArtisticGymnastics #7Olympics #OlympicGames… https://t.co/cJaxEFnyzD',
+ '#Tokyo2020 #Olympics\n#MirabaiChanu\n#Weightlifting\n\nWomen Empowerment\nREAL                         Vs… https://t.co/XLsJb2RH76',
+ "Can't help but cheer for them. Banda 6 goals in 2 games. \nZambia goal difference 7-14 😄\nWell done on getting that p… https://t.co/2G8UDgMClT",
+ "@inquirerdotnet @ftjochoaINQ Caloy Yulo's 14.000, however, was only good for sixth in the rings preliminaries.… https://t.co/bXPm1E0RbF",
+ "Q3 🇨🇦 1-4 🇩🇪\n\nGreen card for Canada's captain Scott Tupper.\n\nFollow the Live scorecard on https://t.co/S2Zt1TJYJG\n\n#Tokyo2020 #CANvGER",
+ 'Hearty Congratulations to \nIndian Railways 🏋️\u200d♀️ player \nSaikhom Mirabai Chanu, for winning the first medal for Ind… https://t.co/9YW3XPLQX1',
+ 'GREAT FIRST ROUND ON THE RINGS!! #LabaPilipinas #TeamPhilippines #Tokyo2020 #Olympics @c_edrielzxs #TokyoOlympics',
+ 'Gymnastics ❤️ #Tokyo2020',......
+"""
+
+from bertopic import BERTopic
+model = BERTopic(verbose=True)
+model.fit(docs)
+topics, probabilities = model.transform(docs)
+
 
