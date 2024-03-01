@@ -1,1 +1,30 @@
+!pip install bertopic
+import pandas as pd
+
+
+df = pd.read_csv("/content/drive/My Drive/tokyo_2020_tweets.csv", engine='python')
+df.head()
+docs = df[0:10000].text.to_list()
+docs
+
+from bertopic import BERTopic
+model = BERTopic(verbose=True)
+model.fit(docs)
+topics, probabilities = model.transform(docs)
+
+model.get_topic_freq().head(10)
+
+model.get_topic(2)
+
+model.visualize_topics()
+
+model.visualize_barchart()
+
+model.visualize_heatmap()
+
+model = BERTopic(nr_topics=5) 
+model.fit(docs)
+topics, probs = model.transform(docs)
+model.get_topic_freq().head(10)
+
 
